@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-import cv2
-import mediapipe as mp
+import cv2 # type: ignore
+import mediapipe as mp # type: ignore
 import numpy as np
 from PIL import Image, ImageTk
 import time
@@ -9,22 +9,21 @@ import time
 class TrackingApp:
     def __init__(self, window):
         self.window = window
-        self.window.title("Enhanced Tracking Application")
-        self.window.geometry("1000x800")
+        self.window.title("Motion Tracking Suite")
+        self.window.geometry("800x600")  # More compact window size
         
-        # Inizializzazione modelli MediaPipe
+        # Initialize MediaPipe models
         self.init_models()
         
-        # Variabili per il tracking
+        # Tracking variables
         self.is_tracking = False
         self.tracking_type = None
         self.cap = None
-        self.current_object_model = 'Chair'
         
         self.create_menu()
         
     def init_models(self):
-        # Modelli che vengono inizializzati all'avvio
+        # Initialize tracking models on startup
         self.mp_hands = mp.solutions.hands
         self.hands = self.mp_hands.Hands()
         
@@ -42,54 +41,57 @@ class TrackingApp:
             min_tracking_confidence=0.5
         )
 
-        self.mp_face_detection = mp.solutions.face_detection
-        self.face_detection = self.mp_face_detection.FaceDetection(
-            model_selection=0, 
-            min_detection_confidence=0.5
-        )
-
-        self.mp_selfie_segmentation = mp.solutions.selfie_segmentation
-        self.selfie_segmentation = self.mp_selfie_segmentation.SelfieSegmentation(
-            model_selection=1
-        )
-
         self.mp_holistic = mp.solutions.holistic
         self.holistic = self.mp_holistic.Holistic(
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
 
-        # Inizializzazione oggetti di drawing
+        # Initialize drawing utilities
         self.mp_draw = mp.solutions.drawing_utils
         self.drawing_styles = mp.solutions.drawing_styles
 
     def create_menu(self):
+        # Clear existing widgets
         for widget in self.window.winfo_children():
             widget.destroy()
             
+        # Configure modern styling
         style = ttk.Style()
-        style.configure('Menu.TButton', font=('Helvetica', 12), padding=10)
+        style.configure('Menu.TButton', 
+                       font=('Helvetica', 11),
+                       padding=8)
         
-        menu_frame = ttk.Frame(self.window, padding="20")
+        # Create centered menu frame
+        menu_frame = ttk.Frame(self.window, padding="15")
         menu_frame.pack(expand=True)
         
-        ttk.Label(menu_frame, text="Seleziona Modalità di Tracking", 
-                 font=('Helvetica', 14, 'bold')).pack(pady=20)
+        # Main title
+        ttk.Label(menu_frame, 
+                 text="Select Tracking Mode",
+                 font=('Helvetica', 14, 'bold')).pack(pady=15)
         
+        # Tracking options with modern descriptions
         tracking_options = [
-            ("Tracking Mani", "hands"),
-            ("Tracking Viso (Mesh)", "face"),
-            ("Rilevamento Volto (Bounding Box)", "face_detection"),
-            ("Segmentazione Corpo/Capelli", "segmentation"),
-            ("Tracking Pose", "pose"),
-            ("Tracking Oggetti 3D", "object"),
-            ("Tracking Olistico", "holistic")
+            ("Hand Tracking", "hands", "Track hand movements and gestures"),
+            ("Face Mesh", "face", "Detailed facial landmark tracking"),
+            ("Pose Estimation", "pose", "Full body pose tracking"),
+            ("Holistic Tracking", "holistic", "Combined face, pose and hand tracking")
         ]
         
-        for text, tracking_type in tracking_options:
-            ttk.Button(menu_frame, text=text, 
+        # Create buttons with descriptions
+        for text, tracking_type, description in tracking_options:
+            option_frame = ttk.Frame(menu_frame)
+            option_frame.pack(pady=8, padx=15, fill='x')
+            
+            ttk.Button(option_frame, 
+                      text=text,
                       command=lambda t=tracking_type: self.start_tracking(t),
-                      style='Menu.TButton').pack(pady=10, padx=20, fill='x')
+                      style='Menu.TButton').pack(fill='x')
+            
+            ttk.Label(option_frame,
+                     text=description,
+                     font=('Helvetica', 9)).pack(pady=(2, 0))
 
     def process_frame(self, frame):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -119,19 +121,6 @@ class TrackingApp:
                         .get_default_face_mesh_contours_style()
                     )
 
-        elif self.tracking_type == "face_detection":
-            results = self.face_detection.process(rgb_frame)
-            if results.detections:
-                for detection in results.detections:
-                    self.mp_draw.draw_detection(frame, detection)
-
-        elif self.tracking_type == "segmentation":
-            results = self.selfie_segmentation.process(rgb_frame)
-            if results.segmentation_mask is not None:
-                mask = np.stack((results.segmentation_mask,) * 3, axis=-1) > 0.2
-                bg_image = np.zeros_like(frame)
-                frame = np.where(mask, frame, bg_image)
-
         elif self.tracking_type == "pose":
             results = self.pose.process(rgb_frame)
             if results.pose_landmarks:
@@ -142,37 +131,27 @@ class TrackingApp:
                     landmark_drawing_spec=self.drawing_styles.get_default_pose_landmarks_style()
                 )
 
-        elif self.tracking_type == "object":
-            if hasattr(self, 'objectron') and self.objectron:
-                results = self.objectron.process(rgb_frame)
-                if results.detected_objects:
-                    for detected_object in results.detected_objects:
-                        self.mp_draw.draw_landmarks(
-                            frame, 
-                            detected_object.landmarks_2d, 
-                            self.mp_objectron.BOX_CONNECTIONS,
-                            self.drawing_styles.get_default_pose_landmarks_style()
-                        )
-
         elif self.tracking_type == "holistic":
             results = self.holistic.process(rgb_frame)
             
-            # Disegna tutti i componenti
-            self.mp_draw.draw_landmarks(
-                frame,
-                results.face_landmarks,
-                self.mp_holistic.FACEMESH_TESSELATION,
-                landmark_drawing_spec=None,
-                connection_drawing_spec=self.drawing_styles
-                .get_default_face_mesh_tesselation_style()
-            )
-            self.mp_draw.draw_landmarks(
-                frame,
-                results.pose_landmarks,
-                self.mp_holistic.POSE_CONNECTIONS,
-                landmark_drawing_spec=self.drawing_styles
-                .get_default_pose_landmarks_style()
-            )
+            # Draw all holistic components
+            if results.face_landmarks:
+                self.mp_draw.draw_landmarks(
+                    frame,
+                    results.face_landmarks,
+                    self.mp_holistic.FACEMESH_TESSELATION,
+                    landmark_drawing_spec=None,
+                    connection_drawing_spec=self.drawing_styles
+                    .get_default_face_mesh_tesselation_style()
+                )
+            if results.pose_landmarks:
+                self.mp_draw.draw_landmarks(
+                    frame,
+                    results.pose_landmarks,
+                    self.mp_holistic.POSE_CONNECTIONS,
+                    landmark_drawing_spec=self.drawing_styles
+                    .get_default_pose_landmarks_style()
+                )
             if results.left_hand_landmarks:
                 self.mp_draw.draw_landmarks(
                     frame,
@@ -196,90 +175,80 @@ class TrackingApp:
         self.tracking_type = tracking_type
         self.is_tracking = True
         
-        # Inizializza Objectron se necessario
-        if tracking_type == "object":
-            self.mp_objectron = mp.solutions.objectron
-            self.objectron = self.mp_objectron.Objectron(
-                static_image_mode=False,
-                max_num_objects=2,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-                model_name=self.current_object_model
-            )
-        
+        # Clear window and create new layout
         for widget in self.window.winfo_children():
             widget.destroy()
             
-        main_frame = ttk.Frame(self.window)
+        main_frame = ttk.Frame(self.window, padding="10")
         main_frame.pack(expand=True, fill='both')
         
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill='x', pady=5, padx=5)
+        # Create control bar
+        control_frame = ttk.Frame(main_frame)
+        control_frame.pack(fill='x', pady=(0, 5))
         
+        # Style for back button
         style = ttk.Style()
-        style.configure('Back.TButton', font=('Helvetica', 10, 'bold'))
+        style.configure('Back.TButton', 
+                       font=('Helvetica', 10, 'bold'))
         
+        # Back button
         back_button = ttk.Button(
-            button_frame, 
-            text="← Torna al Menu", 
+            control_frame, 
+            text="← Back to Menu", 
             command=self.stop_tracking,
             style='Back.TButton'
         )
-        back_button.pack(side='left', padx=5)
+        back_button.pack(side='left')
         
-        # Aggiungi selezione modello per Objectron
-        if tracking_type == "object":
-            self.model_var = tk.StringVar(value='Chair')
-            model_menu = ttk.Combobox(
-                button_frame, 
-                textvariable=self.model_var,
-                values=['Chair', 'Shoe', 'Cup', 'Camera'],
-                state='readonly'
-            )
-            model_menu.pack(side='left', padx=5)
-            model_menu.bind('<<ComboboxSelected>>', self.change_object_model)
+        # Mode indicator
+        ttk.Label(
+            control_frame,
+            text=f"Current Mode: {tracking_type.replace('_', ' ').title()}",
+            font=('Helvetica', 10)
+        ).pack(side='right', padx=5)
         
+        # Video frame
         self.video_frame = ttk.Label(main_frame)
-        self.video_frame.pack(expand=True, fill='both', pady=5)
+        self.video_frame.pack(expand=True, fill='both')
         
+        # Start capture
         self.cap = cv2.VideoCapture(0)
         self.update_frame()
-        
-    def change_object_model(self, event):
-        self.current_object_model = self.model_var.get()
-        self.objectron = self.mp_objectron.Objectron(
-            static_image_mode=False,
-            max_num_objects=2,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-            model_name=self.current_object_model
-        )
         
     def stop_tracking(self):
         self.is_tracking = False
         if self.cap is not None:
             self.cap.release()
-        if hasattr(self, 'objectron'):
-            self.objectron = None
         self.create_menu()
     
     def update_frame(self):
         if self.is_tracking and self.cap is not None:
             start_time = time.time()
             ret, frame = self.cap.read()
+            
             if ret:
+                # Flip frame for mirror effect
                 frame = cv2.flip(frame, 1)
                 frame = self.process_frame(frame)
                 
-                # Calcola e mostra gli FPS
+                # Calculate and display FPS
                 fps = 1 / (time.time() - start_time)
-                cv2.putText(frame, f"FPS: {int(fps)}", (10, 30), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    f"FPS: {int(fps)}",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2
+                )
                 
+                # Convert frame for display
                 cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 img = Image.fromarray(cv2image)
                 
-                img.thumbnail((1000, 800), Image.Resampling.LANCZOS)
+                # Scale image to fit window while maintaining aspect ratio
+                img.thumbnail((780, 580), Image.Resampling.LANCZOS)
                 imgtk = ImageTk.PhotoImage(image=img)
                 
                 self.video_frame.imgtk = imgtk
