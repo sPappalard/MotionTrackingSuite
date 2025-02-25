@@ -11,7 +11,7 @@ import time
 class AdvancedTrackingApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Advanced AI Tracking Suite")
+        self.root.title("Advanced Tracking Suite")
         self.root.geometry("1024x768")
 
         # Initialize MediaPipe models
