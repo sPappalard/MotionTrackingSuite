@@ -1,37 +1,47 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import cv2 
-import mediapipe as mp 
-import numpy as np
-from PIL import Image, ImageTk
+import cv2                              #for video capture and image processing
+import mediapipe as mp                  #Google library for real time detection and tracking of hands, faces, poses and more
+import numpy as np                      #provides maths functions
+from PIL import Image, ImageTk          #Used for image manipulation and to convert frames into a tkinter-compatible format
 import time
 import threading
 import os
-from itertools import cycle
 
+#This  class handles a loading animation drawn on a tkinter Canvas object
 class LoadingAnimation:
+    #the constructor
     def __init__(self, canvas, width, height, color="#3498db"):
         self.canvas = canvas
         self.width = width
         self.height = height
         self.color = color
-        self.is_running = False
+        #to control if the animation is active
+        self.is_running = False         
+        #starting angle for the rotation of the animation
         self.angle = 0
+        #ID of the animation (to stop the animation)
         self.animation_id = None
-        
+
+    #to start the animation    
     def start(self):
         self.is_running = True
         self.draw_frame()
-        
+
+    #to stop the animation    
     def stop(self):
         self.is_running = False
+        #to clean the canvas
         if self.animation_id:
             self.canvas.after_cancel(self.animation_id)
             self.canvas.delete("all")
-            
+
+    #to draw the animation's frame        
     def draw_frame(self):
+        #if the animation is not running, exit to the function
         if not self.is_running:
             return
+        
             
         self.canvas.delete("all")
         
