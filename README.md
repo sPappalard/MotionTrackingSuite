@@ -23,24 +23,24 @@ A Python application that uses computer vision to perform real-time motion track
 
 ## Screenshots
 
-![Main Menu](/TrackingRealTimeSystem/Media/1.png)
+![Main Menu](Media/1.png)
 *Main menu with tracking mode selection cards*
 
-![Hand Tracking](/TrackingRealTimeSystem/Media/2.png)
+![Hand Tracking](Media/2.png)
 *Hand tracking mode with landmark visualization*
 
-![Face Mesh](/TrackingRealTimeSystem/Media/3.png)
+![Face Mesh](Media/3.png)
 *Face mesh tracking with detailed facial landmarks*
 
-![Pose Estimation](/TrackingRealTimeSystem/Media/4.png)
+![Pose Estimation](Media/4.png)
 *Full body pose estimation tracking*
 
-![Olistic Tracking](/TrackingRealTimeSystem/Media/5.png)
+![Olistic Tracking](Media/5.png)
 *Combined tracking of face, pose, and hands*
 
 ## Video Demo
 
-[Watch the demo video](/TrackingRealTimeSystem/Media/6.gif)
+[Watch the demo video](Media/6.gif)
 
 ## Requirements
 
